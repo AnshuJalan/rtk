@@ -35,6 +35,48 @@
 
 rtk filters and compresses command outputs before they reach your LLM context. Single Rust binary, 100+ supported commands, <10ms overhead.
 
+---
+
+## Fork notice — Ethereum / Foundry `cast` support
+
+> **EXPERIMENTAL.** This is a fork of the upstream [rtk-ai/rtk](https://github.com/rtk-ai/rtk). It is not affiliated with upstream and may lag behind on releases. Use at your own risk; expect breakage around Foundry output format changes.
+
+This fork adds **six filters for Foundry's `cast` CLI**, compressing verbose Ethereum RPC output into scannable summaries with **58–97% token savings**.
+
+### Supported `cast` commands
+
+| Command | Savings | What it does |
+|---------|---------|--------------|
+| `rtk cast receipt <tx>` | ~81% | Drops `logsBloom`, decodes log `topic0` via bundled event-signature table |
+| `rtk cast tx <tx>` | ~64% | Drops `r`/`s`/`v`/`yParity`, decodes `input` selector, compacts `accessList` |
+| `rtk cast run <tx>` | 58–77% | Collapses identical/repeated trace frames, detects EIP-1967 proxy delegatecall echoes |
+| `rtk cast logs ...` | ~75% | Groups log entries by block, decodes event `topic0`, truncates long `data` fields |
+| `rtk cast block <id>` | ~96% | Drops `logsBloom`/`mixHash`, summarises tx list as count + first/last hash |
+| `rtk cast block <id> --full` | ~93% | Full header + per-tx one-liner with decoded function selector |
+
+Passthrough is triggered automatically for `--json`, `--raw`, `-vvvv`, and non-TTY stdout — JSON integrations and deep debug traces are never truncated.
+
+### Please disable telemetry on this fork
+
+The upstream telemetry pipeline was built for the main project's usage data, not this fork's. If you are using a build from this repository, please opt out:
+
+```bash
+rtk telemetry disable                  # Withdraw consent
+export RTK_TELEMETRY_DISABLED=1        # Hard override, blocks all collection
+```
+
+Installing from source via `cargo install --git https://github.com/AnshuJalan/rtk` without the upstream `RTK_TELEMETRY_URL` set at build time also effectively disables telemetry, but setting `RTK_TELEMETRY_DISABLED=1` is the belt-and-suspenders option.
+
+### Install this fork
+
+```bash
+cargo install --git https://github.com/AnshuJalan/rtk --force
+```
+
+Issues and PRs for cast-specific behaviour: [AnshuJalan/rtk/issues](https://github.com/AnshuJalan/rtk/issues). For everything else, use [upstream](https://github.com/rtk-ai/rtk).
+
+---
+
 ## Token Savings (30-min Claude Code Session)
 
 | Operation | Frequency | Standard | rtk | Savings |
