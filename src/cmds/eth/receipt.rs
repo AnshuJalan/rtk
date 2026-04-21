@@ -11,7 +11,9 @@ use super::event_topics;
 
 const DATA_HEAD: usize = 18;
 const DATA_TAIL: usize = 14;
-const DATA_TRUNCATE_THRESHOLD: usize = 66;
+// "0x" + 256 hex chars = 128 bytes. Events up to this size render in full;
+// only larger payloads get middle-elided.
+const DATA_TRUNCATE_THRESHOLD: usize = 258;
 
 /// Filter a raw `cast receipt` stdout string into a compact summary.
 pub fn filter(raw: &str) -> String {
@@ -291,8 +293,16 @@ mod tests {
     }
 
     #[test]
+    fn truncate_hex_128_bytes_untouched() {
+        // 128-byte payloads render in full so small events stay readable.
+        let at_threshold = format!("0x{}", "ab".repeat(128));
+        assert_eq!(truncate_hex(&at_threshold), at_threshold);
+    }
+
+    #[test]
     fn truncate_hex_long_shortened() {
-        let long = format!("0x{}", "ab".repeat(128));
+        // 200-byte payload (> 128 bytes) gets middle-elided.
+        let long = format!("0x{}", "ab".repeat(200));
         let short = truncate_hex(&long);
         assert!(short.len() < long.len());
         assert!(short.contains("…"));

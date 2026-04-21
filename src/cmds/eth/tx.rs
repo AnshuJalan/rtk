@@ -3,14 +3,11 @@
 //! Strategy (report §3.2): drop `r`/`s`/`v`/`yParity` signature fields
 //! (agent can't verify without the private key anyway), decode the
 //! `input` field's 4-byte selector via [`super::selectors`], compact
-//! `accessList` entries, and truncate long calldata while preserving the
-//! selector so the agent still knows what was called.
+//! `accessList` entries, and preserve the full calldata so the agent
+//! can actually read the call arguments — reading calldata is the
+//! primary reason to run `cast tx`.
 
 use super::selectors;
-
-const CALLDATA_HEAD: usize = 18; // includes 0x + 4-byte selector + 8 more hex chars
-const CALLDATA_TAIL: usize = 14;
-const CALLDATA_THRESHOLD: usize = 82;
 
 pub fn filter(raw: &str) -> String {
     let stripped = crate::core::utils::strip_ansi(raw);
@@ -171,17 +168,10 @@ fn compact_calldata(hex: &str, decoded: Option<&str>) -> String {
         Some(sig) => format!("0x{} [{}]", &hex[2..10], sig),
         None => format!("0x{}", &hex[2..10]),
     };
-    if hex.len() <= CALLDATA_THRESHOLD {
-        return format!("{} {}", label, &hex[10..]);
+    if hex.len() <= 10 {
+        return label;
     }
-    let byte_len = (hex.len() - 2) / 2;
-    format!(
-        "{} {}…{} ({} bytes)",
-        label,
-        &hex[10..10 + CALLDATA_HEAD.min(hex.len() - 10)],
-        &hex[hex.len() - CALLDATA_TAIL..],
-        byte_len
-    )
+    format!("{} {}", label, &hex[10..])
 }
 
 fn starts_with_key(line: &str, key: &str) -> bool {
@@ -221,5 +211,23 @@ mod tests {
         let raw = "input                0xa9059cbb0000000000000000000000001111111111111111111111111111111111111111000000000000000000000000000000000000000000000000016345785d8a0000\n";
         let out = filter(raw);
         assert!(out.contains("transfer(address,uint256)"));
+    }
+
+    #[test]
+    fn preserves_full_calldata_args() {
+        // Reading calldata is the primary value of `cast tx` — the args
+        // after the selector must survive the filter verbatim.
+        let raw = "input                0xa9059cbb0000000000000000000000001111111111111111111111111111111111111111000000000000000000000000000000000000000000000000016345785d8a0000\n";
+        let out = filter(raw);
+        assert!(
+            out.contains("0000000000000000000000001111111111111111111111111111111111111111"),
+            "address arg dropped from calldata: {}",
+            out
+        );
+        assert!(
+            out.contains("000000000000000000000000000000000000000000000000016345785d8a0000"),
+            "value arg dropped from calldata: {}",
+            out
+        );
     }
 }

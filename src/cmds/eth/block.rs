@@ -116,8 +116,10 @@ fn emit_tx_summary(out: &mut String, txs: &[String]) {
         out.push_str("transactions: 0\n");
         return;
     }
-    let first = txs.first().map(|h| short_hash(h)).unwrap_or_default();
-    let last = txs.last().map(|h| short_hash(h)).unwrap_or_default();
+    // Tx hashes stay full so the agent can pipe them into the next
+    // `cast receipt`/`cast tx`/`cast run` without a second lookup.
+    let first = txs.first().map(|h| h.as_str()).unwrap_or_default();
+    let last = txs.last().map(|h| h.as_str()).unwrap_or_default();
     out.push_str(&format!(
         "transactions: {} (first: {} last: {})\n",
         txs.len(),
@@ -257,10 +259,11 @@ fn format_full_tx(tx: &FullTx, fallback_index: usize) -> String {
         .as_deref()
         .map(summarise_selector)
         .unwrap_or_default();
+    // Tx hash stays full — the agent pipes it into follow-up cast commands.
     let hash = tx
         .hash
         .as_deref()
-        .map(short_hash)
+        .map(|h| h.trim().to_string())
         .unwrap_or_else(|| format!("idx{}", fallback_index));
     format!("{} {} → {}  value={}{}", hash, from, to, value, sel_label)
 }

@@ -180,10 +180,11 @@ fn format_log_line(log: &LogEntry) -> String {
     } else {
         String::new()
     };
+    // Tx hash stays full — composes with the next `cast receipt`/`cast tx`.
     let tx = log
         .tx_hash
         .as_deref()
-        .map(|h| format!("  tx {}", short_hash(h)))
+        .map(|h| format!("  tx {}", h.trim()))
         .unwrap_or_default();
     let data = log
         .data
@@ -215,7 +216,9 @@ fn short_hash(hash: &str) -> String {
 
 fn compact_data(data: &str) -> String {
     let d = data.trim();
-    if d.len() <= 66 {
+    // "0x" + 256 hex chars = 128 bytes. Small data fields render in full;
+    // only larger payloads get middle-elided.
+    if d.len() <= 258 {
         return d.to_string();
     }
     let body = d.trim_start_matches("0x");
