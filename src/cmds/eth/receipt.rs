@@ -1,13 +1,14 @@
 //! Filter for `cast receipt` — compresses Foundry receipt output.
 //!
 //! Strategy (report §3.1): drop `logsBloom`, decode each log's `topics[0]`
-//! via [`crate::cmds::eth::event_topics`], truncate long `data` fields,
-//! preserve everything else so the agent still sees status, block, gas,
-//! and log addresses.
+//! via [`crate::cmds::eth::fourbyte`] (shell-out to `cast 4byte-event`,
+//! cached per invocation), truncate long `data` fields, preserve
+//! everything else so the agent still sees status, block, gas, and log
+//! addresses.
 
 use std::fmt::Write;
 
-use super::event_topics;
+use super::fourbyte;
 
 const DATA_HEAD: usize = 18;
 const DATA_TAIL: usize = 14;
@@ -28,6 +29,7 @@ pub fn filter(raw: &str) -> String {
 }
 
 fn try_filter(raw: &str) -> Result<String, &'static str> {
+    fourbyte::reset_cache();
     let mut out = String::with_capacity(raw.len() / 3);
     let mut in_logs_block = false;
     let mut in_logs_entry = false;
@@ -147,7 +149,7 @@ fn summarise_log_entry(index: usize, entry_lines: &[String]) -> Option<String> {
     }
     match &topic0 {
         Some(t) => {
-            let decoded = event_topics::lookup_hex(t);
+            let decoded = fourbyte::lookup_topic0_hex(t);
             match decoded {
                 Some(sig) => {
                     let _ = write!(line, "{}", sig);
@@ -208,9 +210,9 @@ fn summarise_json_logs(json_text: &str, out: &mut String) {
 
                 let mut line = format!("  #{} @ {} ", i, short_addr(address));
                 match topics.first() {
-                    Some(t0) => match super::event_topics::lookup_hex(t0) {
+                    Some(t0) => match super::fourbyte::lookup_topic0_hex(t0) {
                         Some(sig) => {
-                            line.push_str(sig);
+                            line.push_str(&sig);
                             if topics.len() > 1 {
                                 line.push_str(&format!(" [+{}]", topics.len() - 1));
                             }
