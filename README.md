@@ -45,18 +45,18 @@ This fork adds **six filters for Foundry's `cast` CLI**, compressing verbose Eth
 
 ### Supported `cast` commands
 
-Savings measured against real mainnet fixtures (`cargo test --release cast_gain`). `cast run` varies with trace shape — proxy-heavy traces collapse more than simple swaps.
+Two savings columns: **fixture** (the checked-in mainnet snapshot exercised by `cargo test --release cast_gain`) and **mainnet** (live data points, measured on 2026-04-21). Mainnet values vary heavily with tx/block shape — the sample below deliberately skews toward proxy-heavy, calldata-dense contracts (Aave V3, Permit2, CowSwap, Balancer, Pendle, 1inch V6, Curve, EigenLayer, Lido) to show worst-case behaviour for `cast tx` and `cast run`.
 
-| Command                      | Savings                                                                                          | What it does                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `rtk cast receipt <tx>`      | ~75%                                                                                             | Drops `logsBloom`, decodes log `topic0` on-demand via `cast 4byte-event`              |
-| `rtk cast tx <tx>`           | ~24% on simple transfers, higher on contract-call txs with long calldata                         | Drops `r`/`s`/`v`/`yParity`, decodes `input` selector via `cast 4byte`, compacts `accessList`; preserves `to`/`value`/`nonce`/`gasLimit`/`chainId`/`hash` |
-| `rtk cast run <tx>`          | ~16% mainnet avg (up to ~29% on proxy-heavy txs like 1inch/Aave V3 routing; ~58% on the fixture) | Collapses identical/repeated trace frames, detects EIP-1967 proxy delegatecall echoes |
-| `rtk cast logs ...`          | ~67%                                                                                             | Groups log entries by block, decodes event `topic0` via `cast 4byte-event`, truncates long `data` fields |
-| `rtk cast block <id>`        | ~96%                                                                                             | Drops `logsBloom`/`mixHash`, summarises tx list as count + first/last hash            |
-| `rtk cast block <id> --full` | ~90%                                                                                             | Full header + per-tx one-liner with selector decoded via `cast 4byte`                 |
+| Command                      | Fixture | Mainnet range | Mainnet avg | What it does                                                                          |
+| ---------------------------- | ------- | ------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `rtk cast receipt <tx>`      | ~75%    | 59–78%        | ~71%        | Drops `logsBloom`, decodes log `topic0` on-demand via `cast 4byte-event`              |
+| `rtk cast tx <tx>`           | ~24%    | 1–85%         | ~22%        | Drops `r`/`s`/`v`/`yParity`, decodes `input` selector via `cast 4byte`, compacts `accessList`; preserves `to`/`value`/`nonce`/`gasLimit`/`chainId`/`hash` |
+| `rtk cast run <tx>`          | ~58%    | 0–25%         | ~9%         | Collapses identical/repeated trace frames, detects EIP-1967 proxy delegatecall echoes |
+| `rtk cast logs ...`          | ~67%    | 41–70%        | ~55%        | Groups log entries by block, decodes event `topic0` via `cast 4byte-event`, truncates long `data` fields |
+| `rtk cast block <id>`        | ~96%    | 79–97%        | ~93%        | Drops `logsBloom`/`mixHash`, summarises tx list as count + first/last hash            |
+| `rtk cast block <id> --full` | ~90%    | 89–95%        | ~91%        | Full header + per-tx one-liner with selector decoded via `cast 4byte`                 |
 
-`cast run` mainnet reference: 15 contract-call txs from block 24,928,780 measured aggregate 15.8% byte reduction, with individual tx savings ranging 0% (simple swaps) to 28.7% (proxy-heavy multi-hop).
+Mainnet sample: for `cast tx`/`receipt`/`run` — 9 proxy-heavy transactions (Aave V3 Pool, Permit2, CowSwap Settlement, Balancer Vault, Pendle, 1inch V6, Curve Tricrypto2, EigenLayer StrategyManager, Lido stETH); for `cast logs` n=6 — three contract/block windows returned no events. `cast block` / `cast block --full` reuse a separate random 10-point mainnet sample across blocks 24,429,387–24,929,287. RPC split: drpc.org for tx/receipt/logs, ethereum-rpc.publicnode.com for `cast run` (drpc's `debug_traceTransaction` timed out on deep proxy traces). The `cast run` average is intentionally pessimistic — proxy-heavy traces have the fewest identical frames to collapse, and many already hit the raw output's `[...]` truncation marker upstream.
 
 ### Please disable telemetry on this fork
 

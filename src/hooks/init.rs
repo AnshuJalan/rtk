@@ -188,13 +188,14 @@ rtk wget <url>          # Compact download output (65%)
 ```
 
 ### Ethereum / Foundry
+
 ```bash
-rtk cast receipt <tx>       # Drop logsBloom, decode log topics via `cast 4byte-event` (~75%)
-rtk cast tx <tx>            # Drop signature, decode input selector via `cast 4byte`; preserve to/value/nonce/gas/chainId (~24% simple transfer, higher with long calldata)
-rtk cast run <tx>           # Collapse identical frames + proxy echo (~16% mainnet avg, up to ~29% on proxy-heavy txs)
-rtk cast logs               # Group by block, decode topic0 via `cast 4byte-event` (~67%)
-rtk cast block <id>         # Drop logsBloom/mixHash, compact tx list (~96%)
-rtk cast block <id> --full  # Per-tx one-liner with selector decoded via `cast 4byte` (~90%)
+rtk cast receipt <tx>       # Drop logsBloom, decode log topics via `cast 4byte-event` — mainnet 59–78%
+rtk cast tx <tx>            # Drop signature, decode input selector; preserve to/value/nonce/gas/chainId — mainnet 1–85%
+rtk cast run <tx>           # Collapse identical frames + proxy echo — mainnet 0–25%
+rtk cast logs               # Group by block, decode topic0 via `cast 4byte-event` — mainnet 41–70%
+rtk cast block <id>         # Drop logsBloom/mixHash, compact tx list — mainnet 79–97%
+rtk cast block <id> --full  # Per-tx one-liner with selector decoded via `cast 4byte` — mainnet 89–95%
 ```
 
 Note: `--json`, `--raw`, `-vvvv` flags and non-TTY stdout trigger passthrough (no filtering), so JSON integrations and deep debug traces are never truncated.
@@ -221,7 +222,7 @@ rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
 | Files | ls, read, grep, find | 60-75% |
 | Infrastructure | docker, kubectl | 85% |
 | Network | curl, wget | 65-70% |
-| Ethereum | cast receipt, tx, run, logs, block | ~16-96% (cast run varies with trace shape) |
+| Ethereum | cast receipt, tx, run, logs, block | mainnet avg 9-93% (see Ethereum / Foundry section) |
 
 Overall average: **60-90% token reduction** on common development operations.
 <!-- /rtk-instructions -->
